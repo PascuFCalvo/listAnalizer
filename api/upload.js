@@ -1,8 +1,7 @@
 import multer from "multer";
 import fs from "fs";
 import { promisify } from "util";
-import { PDFDocument } from "pdf-lib";
-import * as pdfjsLib from "pdfjs-dist";
+import pdfParse from "pdf-parse";
 
 const unlinkAsync = promisify(fs.unlink);
 
@@ -19,15 +18,18 @@ export const config = {
 
 export default async function handler(req, res) {
   try {
+    // Habilitar CORS para permitir acceso desde cualquier dominio
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
     res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
+    // Manejar solicitudes de preflight OPTIONS
     if (req.method === "OPTIONS") {
       res.status(200).end();
       return;
     }
 
+    // Procesar la subida del archivo
     await new Promise((resolve, reject) => {
       upload.single("file")(req, {}, (err) => {
         if (err) reject(err);
@@ -42,29 +44,17 @@ export default async function handler(req, res) {
     const filePath = req.file.path;
     console.log("Archivo subido en ruta:", filePath);
 
-    if (!fs.existsSync(filePath)) {
-      throw new Error("El archivo no existe en la ruta especificada");
-    }
-
-    // Leer el archivo PDF usando pdf-lib y pdfjs-dist
+    // Leer el archivo PDF desde el sistema de archivos
     const dataBuffer = fs.readFileSync(filePath);
-    const pdfDoc = await PDFDocument.load(dataBuffer);
 
-    // Extraer texto usando pdfjs-dist
-    const loadingTask = pdfjsLib.getDocument({ data: dataBuffer });
-    const pdf = await loadingTask.promise;
+    // Utilizar pdf-parse para extraer el texto
+    const data = await pdfParse(dataBuffer);
 
-    let extractedText = "";
-    for (let i = 0; i < pdf.numPages; i++) {
-      const page = await pdf.getPage(i + 1);
-      const content = await page.getTextContent();
-      const textItems = content.items.map((item) => item.str).join(" ");
-      extractedText += textItems + "\n";
-    }
-
+    // Extraer el texto
+    const extractedText = data.text;
     console.log("Texto extraído:", extractedText);
 
-    // Aquí puedes procesar el texto extraído y analizar las unidades
+    // Aquí puedes procesar el texto extraído para encontrar unidades rotas y duras
     const unidades_rotas_encontradas = [];
     const unidades_duras_encontradas = [];
     let puntuacion = 0;
@@ -102,6 +92,7 @@ export default async function handler(req, res) {
       }
     };
 
+    // Procesar el texto línea por línea
     const lines = extractedText
       .split(/\r?\n/)
       .filter((line) => line.trim() !== "");
