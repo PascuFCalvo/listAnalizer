@@ -3,6 +3,7 @@ import multer from "multer";
 import dotenv from "dotenv";
 import pdfParse from "pdf-parse";
 import cors from "cors";
+import serverless from "serverless-http";
 
 // Configura dotenv para manejar variables de entorno
 dotenv.config();
