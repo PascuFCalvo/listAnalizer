@@ -5,21 +5,19 @@ import { promisify } from "util";
 
 const unlinkAsync = promisify(fs.unlink);
 
-// Configurar Multer para manejar la subida de archivos
 const upload = multer({
-  dest: "/tmp", // Vercel recomienda usar /tmp para almacenamiento temporal
-  limits: { fileSize: 50 * 1024 * 1024 }, // Limitar a 50MB
+  dest: "/tmp",
+  limits: { fileSize: 50 * 1024 * 1024 },
 });
 
 export const config = {
   api: {
-    bodyParser: false, // Deshabilitar el parser de body por defecto
+    bodyParser: false,
   },
 };
 
 export default async function handler(req, res) {
   try {
-    // Habilitar CORS para que cualquier dominio pueda acceder a la API
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
     res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -40,20 +38,26 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "No se ha subido ningún archivo" });
     }
 
-    // Leer el archivo PDF
     const filePath = req.file.path;
+
+    if (!fs.existsSync(filePath)) {
+      throw new Error("Archivo temporal no encontrado en /tmp");
+    }
+
+    console.log("Archivo subido:", req.file);
+
     const dataBuffer = fs.readFileSync(filePath);
     const data = await pdfParse(dataBuffer);
     const text = data.text;
 
-    // Fragmentar el texto en líneas y eliminar líneas vacías
+    console.log("Texto extraído:", text);
+
     const lines = text.split(/\r?\n/).filter((line) => line.trim() !== "");
 
     let unidades_rotas_encontradas = [];
     let unidades_duras_encontradas = [];
     let puntuacion = 0;
 
-    // Definir las unidades
     const unidades_rotas = [
       "hexwraiths",
       "morghasts",
@@ -78,30 +82,22 @@ export default async function handler(req, res) {
       "harrow",
     ];
 
-    // Función para agregar o actualizar unidades en el array
     const agregarOActualizarUnidad = (arr, nombreUnidad, tier) => {
       const unidadExistente = arr.find((u) => u.unidad === nombreUnidad);
       if (unidadExistente) {
         unidadExistente.cantidad += 1;
       } else {
-        arr.push({
-          tier: tier,
-          unidad: nombreUnidad,
-          cantidad: 1,
-        });
+        arr.push({ tier: tier, unidad: nombreUnidad, cantidad: 1 });
       }
     };
 
-    // Recorrer cada línea en busca de unidades
     lines.forEach((line, index) => {
-      // Verificar unidades rotas
       unidades_rotas.forEach((unidad) => {
         const regex = new RegExp(unidad, "gi");
         if (line.match(regex)) {
-          const maxLinesToCheck = 1;
           let isReinforced = false;
 
-          for (let i = 1; i <= maxLinesToCheck; i++) {
+          for (let i = 1; i <= 1; i++) {
             const nextLine = lines[index + i]
               ? lines[index + i].toLowerCase()
               : "";
@@ -110,35 +106,29 @@ export default async function handler(req, res) {
               nextLine.includes("reforzada")
             ) {
               isReinforced = true;
-              puntuacion += 5; // Unidad rota reforzada
+              puntuacion += 5;
               break;
             }
           }
 
           if (!isReinforced) {
-            puntuacion += 3; // Unidad rota no reforzada
+            puntuacion += 3;
           }
 
-          if (isReinforced) {
-            agregarOActualizarUnidad(
-              unidades_rotas_encontradas,
-              `${unidad} - reforzada`,
-              "S"
-            );
-          } else {
-            agregarOActualizarUnidad(unidades_rotas_encontradas, unidad, "S");
-          }
+          agregarOActualizarUnidad(
+            unidades_rotas_encontradas,
+            isReinforced ? `${unidad} - reforzada` : unidad,
+            "S"
+          );
         }
       });
 
-      // Verificar unidades duras
       unidades_duras.forEach((unidad) => {
         const regex = new RegExp(unidad, "gi");
         if (line.match(regex)) {
-          const maxLinesToCheck = 1;
           let isReinforced = false;
 
-          for (let i = 1; i <= maxLinesToCheck; i++) {
+          for (let i = 1; i <= 1; i++) {
             const nextLine = lines[index + i]
               ? lines[index + i].toLowerCase()
               : "";
@@ -147,29 +137,24 @@ export default async function handler(req, res) {
               nextLine.includes("reforzada")
             ) {
               isReinforced = true;
-              puntuacion += 2; // Unidad dura reforzada
+              puntuacion += 2;
               break;
             }
           }
 
           if (!isReinforced) {
-            puntuacion += 1; // Unidad dura no reforzada
+            puntuacion += 1;
           }
 
-          if (isReinforced) {
-            agregarOActualizarUnidad(
-              unidades_duras_encontradas,
-              `${unidad} - reforzada`,
-              "A"
-            );
-          } else {
-            agregarOActualizarUnidad(unidades_duras_encontradas, unidad, "A");
-          }
+          agregarOActualizarUnidad(
+            unidades_duras_encontradas,
+            isReinforced ? `${unidad} - reforzada` : unidad,
+            "A"
+          );
         }
       });
     });
 
-    // Crear un objeto que contenga todos los resultados
     const resultados = {
       unidades_rotas_encontradas,
       unidades_duras_encontradas,
@@ -180,13 +165,15 @@ export default async function handler(req, res) {
           : "Equipo seguro",
     };
 
-    // Eliminar el archivo temporal
+    console.log("Resultados finales:", resultados);
+
     await unlinkAsync(filePath);
 
-    // Enviar el objeto como respuesta
     res.status(200).json(resultados);
   } catch (error) {
     console.error("Error al procesar el archivo:", error);
-    res.status(500).json({ error: "Error al procesar el archivo" });
+    res
+      .status(500)
+      .json({ error: `Error al procesar el archivo: ${error.message}` });
   }
 }
