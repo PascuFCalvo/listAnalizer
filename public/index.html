@@ -169,8 +169,8 @@
       // Configuración de la URL base según el entorno
       const API_URL =
         window.location.hostname === "localhost"
-          ? "http://localhost:3000"
-          : "https://list-analizer.vercel.app"; // URL de producción en Vercel
+          ? "http://localhost:3000/api/upload"
+          : "/api/upload"; // En producción, Vercel usará esta ruta automáticamente
 
       document
         .getElementById("uploadForm")
@@ -189,10 +189,9 @@
           formData.append("file", file);
 
           try {
-            const response = await fetch(`${API_URL}/upload`, {
+            const response = await fetch(API_URL, {
               method: "POST",
               body: formData,
-              mode: "no-cors",
             });
 
             if (!response.ok) {
