@@ -60,6 +60,7 @@ const upload = multer({
 app.use(express.static(path.join(__dirname, "public")));
 
 // Ruta para subir y procesar archivos PDF
+//añador no-cors
 app.post("/upload", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) {

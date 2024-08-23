@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import pdfParse from "pdf-parse";
 import { promisify } from "util";
+import cors from "cors";
 
 const unlinkAsync = promisify(fs.unlink);
 
