@@ -27,7 +27,6 @@ export default async function handler(req, res) {
       return;
     }
 
-    // Procesar la subida del archivo
     await new Promise((resolve, reject) => {
       upload.single("file")(req, {}, (err) => {
         if (err) reject(err);
@@ -71,8 +70,11 @@ export default async function handler(req, res) {
     // Guardar los cambios en el archivo PDF
     const pdfBytes = await pdfDoc.save();
 
-    // Opcional: Puedes enviar el PDF modificado como respuesta
+    // Establecer encabezados para descargar el PDF
+    res.setHeader("Content-Disposition", 'attachment; filename="modified.pdf"');
     res.setHeader("Content-Type", "application/pdf");
+
+    // Enviar el archivo PDF
     res.status(200).send(Buffer.from(pdfBytes));
 
     // Eliminar el archivo temporal
