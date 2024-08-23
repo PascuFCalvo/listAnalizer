@@ -166,11 +166,9 @@
     </div>
 
     <script>
-      // Configuración de la URL base según el entorno
+      // Configuración de la URL base según el entorno que está en Netlify
       const API_URL =
-        window.location.hostname === "localhost"
-          ? "http://localhost:3000/api/upload"
-          : "/api/upload"; // En producción, Vercel usará esta ruta automáticamente
+        "https://neon-pudding-d9b4de.netlify.app/.netlify/functions/upload";
 
       document
         .getElementById("uploadForm")

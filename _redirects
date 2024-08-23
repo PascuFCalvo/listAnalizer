@@ -1,0 +1,3 @@
+  from = "/api/upload"
+  to = "/.netlify/functions/upload"
+  status = 200
