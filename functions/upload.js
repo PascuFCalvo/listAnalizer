@@ -1,12 +1,8 @@
 import express from "express";
 import multer from "multer";
-import fs from "fs";
 import dotenv from "dotenv";
 import pdfParse from "pdf-parse";
-import path from "path";
-import { fileURLToPath } from "url";
 import cors from "cors";
-import serverless from "serverless-http";
 
 // Configura dotenv para manejar variables de entorno
 dotenv.config();
@@ -15,14 +11,11 @@ const app = express();
 app.use(cors());
 const port = process.env.PORT || 3000;
 
-// Obtener __dirname en un módulo ES
-// const __filename = fileURLToPath(import.meta.url);
-// const __dirname = path.dirname(__filename);
-
-// Crear la carpeta "uploads" si no existe
-// Usar rutas relativas temporales en lugar de __dirname
-const uploadDir = path.join("uploads");
-app.use(express.static("public"));
+// Configurar Multer para manejar la subida de archivos directamente en memoria
+const upload = multer({
+  storage: multer.memoryStorage(), // Almacena los archivos en memoria
+  limits: { fileSize: 50 * 1024 * 1024 }, // Limitar a 50MB
+});
 
 const unidades_rotas = [
   "hexwraiths",
@@ -50,25 +43,15 @@ const unidades_duras = [
 
 let puntuacion = 0;
 
-// Configurar Multer para manejar la subida de archivos
-const upload = multer({
-  dest: uploadDir,
-  limits: { fileSize: 50 * 1024 * 1024 }, // Limitar a 50MB
-});
-
-// Servir archivos estáticos desde la carpeta 'public'
-app.use(express.static(path.join(__dirname, "public")));
-
-// Ruta para subir y procesar archivos PDF
+// Ruta para subir y procesar archivos PDF directamente desde el buffer en memoria
 app.post("/upload", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).send("No se ha subido ningún archivo");
     }
 
-    // Leer el archivo PDF
-    const dataBuffer = fs.readFileSync(req.file.path);
-    const data = await pdfParse(dataBuffer);
+    // Procesar el archivo PDF directamente desde el buffer en memoria
+    const data = await pdfParse(req.file.buffer);
     const text = data.text;
 
     // Fragmentar el texto en líneas y eliminar líneas vacías
@@ -193,5 +176,4 @@ app.post("/upload", upload.single("file"), async (req, res) => {
   }
 });
 
-// Exportar la aplicación para ser usada por Netlify Functions
 export const handler = serverless(app);
