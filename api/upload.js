@@ -2,6 +2,7 @@ import multer from "multer";
 import fs from "fs";
 import { promisify } from "util";
 import { PDFDocument } from "pdf-lib";
+import * as pdfjsLib from "pdfjs-dist";
 
 const unlinkAsync = promisify(fs.unlink);
 
@@ -18,7 +19,6 @@ export const config = {
 
 export default async function handler(req, res) {
   try {
-    // Habilitar CORS para que cualquier dominio pueda acceder a la API
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
     res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -28,7 +28,6 @@ export default async function handler(req, res) {
       return;
     }
 
-    // Procesar la subida del archivo
     await new Promise((resolve, reject) => {
       upload.single("file")(req, {}, (err) => {
         if (err) reject(err);
@@ -47,21 +46,21 @@ export default async function handler(req, res) {
       throw new Error("El archivo no existe en la ruta especificada");
     }
 
-    // Cargar el archivo PDF usando pdf-lib
+    // Leer el archivo PDF usando pdf-lib y pdfjs-dist
     const dataBuffer = fs.readFileSync(filePath);
     const pdfDoc = await PDFDocument.load(dataBuffer);
 
-    // Obtener todas las páginas del PDF
-    const pages = pdfDoc.getPages();
-    let extractedText = "";
+    // Extraer texto usando pdfjs-dist
+    const loadingTask = pdfjsLib.getDocument({ data: dataBuffer });
+    const pdf = await loadingTask.promise;
 
-    // Extraer texto de cada página
-    pages.forEach((page) => {
-      const { width, height } = page.getSize();
-      extractedText += `Página de tamaño: ${width}x${height}\n`; // Aquí no tenemos un método para extraer texto directamente
-      // Aquí es donde tendrías que usar una librería adicional para extraer texto
-      // Actualmente, pdf-lib no tiene una función nativa para extraer texto.
-    });
+    let extractedText = "";
+    for (let i = 0; i < pdf.numPages; i++) {
+      const page = await pdf.getPage(i + 1);
+      const content = await page.getTextContent();
+      const textItems = content.items.map((item) => item.str).join(" ");
+      extractedText += textItems + "\n";
+    }
 
     console.log("Texto extraído:", extractedText);
 
@@ -103,7 +102,6 @@ export default async function handler(req, res) {
       }
     };
 
-    // Simulando líneas de texto extraído para analizar
     const lines = extractedText
       .split(/\r?\n/)
       .filter((line) => line.trim() !== "");
