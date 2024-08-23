@@ -5,15 +5,17 @@ import pdfParse from "pdf-parse";
 import cors from "cors";
 import serverless from "serverless-http";
 
+// Configura dotenv para manejar variables de entorno
 dotenv.config();
 
 const app = express();
 app.use(cors());
 const port = process.env.PORT || 3000;
 
+// Configurar Multer para manejar la subida de archivos directamente en memoria
 const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 50 * 1024 * 1024 },
+  storage: multer.memoryStorage(), // Almacena los archivos en memoria
+  limits: { fileSize: 50 * 1024 * 1024 }, // Limitar a 50MB
 });
 
 const unidades_rotas = [
@@ -43,13 +45,20 @@ const unidades_duras = [
 let puntuacion = 0;
 
 app.post("/upload", upload.single("file"), async (req, res) => {
+  console.log("Received request at /upload"); // Registro de inicio de la ruta
   try {
     if (!req.file) {
+      console.log("No file uploaded"); // Registro si no se ha subido archivo
       return res.status(400).send("No se ha subido ningún archivo");
     }
 
+    console.log("File received:", req.file.originalname); // Registro del archivo recibido
+
+    // Procesar el archivo PDF directamente desde el buffer en memoria
     const data = await pdfParse(req.file.buffer);
     const text = data.text;
+
+    console.log("PDF parsed successfully"); // Registro después de analizar el PDF
     const lines = text.split(/\r?\n/).filter((line) => line.trim() !== "");
 
     let unidades_rotas_encontradas = [];
@@ -84,13 +93,13 @@ app.post("/upload", upload.single("file"), async (req, res) => {
               nextLine.includes("reforzada")
             ) {
               isReinforced = true;
-              puntuacion += 5;
+              puntuacion += 5; // Unidad rota reforzada
               break;
             }
           }
 
           if (!isReinforced) {
-            puntuacion += 3;
+            puntuacion += 3; // Unidad rota no reforzada
           }
 
           if (isReinforced) {
@@ -120,13 +129,13 @@ app.post("/upload", upload.single("file"), async (req, res) => {
               nextLine.includes("reforzada")
             ) {
               isReinforced = true;
-              puntuacion += 2;
+              puntuacion += 2; // Unidad dura reforzada
               break;
             }
           }
 
           if (!isReinforced) {
-            puntuacion += 1;
+            puntuacion += 1; // Unidad dura no reforzada
           }
 
           if (isReinforced) {
@@ -152,7 +161,7 @@ app.post("/upload", upload.single("file"), async (req, res) => {
           : "Equipo seguro",
     };
 
-    console.log(resultados);
+    console.log("Results:", resultados); // Registro de los resultados
 
     puntuacion = 0;
 
