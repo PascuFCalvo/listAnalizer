@@ -5,7 +5,7 @@ import dotenv from "dotenv";
 import pdfParse from "pdf-parse";
 import cors from "cors";
 import serverless from "serverless-http";
-import { __dirname } from "./paths.js";
+import { __dirname } from "../path.js";
 
 // Configura dotenv para manejar variables de entorno
 dotenv.config();
