@@ -1,7 +1,7 @@
 import multer from "multer";
 import fs from "fs";
 import { promisify } from "util";
-import pdfParse from "pdf-parse";
+import * as pdfjsLib from "pdfjs-dist";
 
 const unlinkAsync = promisify(fs.unlink);
 
@@ -47,11 +47,20 @@ export default async function handler(req, res) {
     // Leer el archivo PDF desde el sistema de archivos
     const dataBuffer = fs.readFileSync(filePath);
 
-    // Utilizar pdf-parse para extraer el texto
-    const data = await pdfParse(dataBuffer);
+    // Usar pdfjs-dist para extraer el texto del PDF
+    const loadingTask = pdfjsLib.getDocument({ data: dataBuffer });
+    const pdf = await loadingTask.promise;
 
-    // Extraer el texto
-    const extractedText = data.text;
+    let extractedText = "";
+
+    // Recorrer todas las páginas del PDF y extraer el texto
+    for (let i = 0; i < pdf.numPages; i++) {
+      const page = await pdf.getPage(i + 1);
+      const content = await page.getTextContent();
+      const pageText = content.items.map((item) => item.str).join(" ");
+      extractedText += pageText + "\n";
+    }
+
     console.log("Texto extraído:", extractedText);
 
     // Aquí puedes procesar el texto extraído para encontrar unidades rotas y duras
