@@ -5,11 +5,13 @@ import dotenv from "dotenv";
 import pdfParse from "pdf-parse";
 import path from "path";
 import { fileURLToPath } from "url";
+import cors from "cors";
 
 // Configura dotenv para manejar variables de entorno
 dotenv.config();
 
 const app = express();
+app.use(cors());
 const port = process.env.PORT || 3000;
 
 // Obtener __dirname en un módulo ES
