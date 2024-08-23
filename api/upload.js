@@ -5,14 +5,15 @@ import { promisify } from "util";
 
 const unlinkAsync = promisify(fs.unlink);
 
+// Configurar Multer para manejar la subida de archivos
 const upload = multer({
-  dest: "/tmp",
-  limits: { fileSize: 50 * 1024 * 1024 },
+  dest: "/tmp", // Vercel recomienda usar /tmp para almacenamiento temporal
+  limits: { fileSize: 50 * 1024 * 1024 }, // Limitar a 50MB
 });
 
 export const config = {
   api: {
-    bodyParser: false,
+    bodyParser: false, // Deshabilitar el parser de body por defecto
   },
 };
 
@@ -38,14 +39,12 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "No se ha subido ningún archivo" });
     }
 
+    // Asegúrate de procesar solo el archivo subido
     const filePath = req.file.path;
-
-    if (!fs.existsSync(filePath)) {
-      throw new Error("Archivo temporal no encontrado en /tmp");
-    }
 
     console.log("Archivo subido:", req.file);
 
+    // Leer el archivo PDF subido en /tmp
     const dataBuffer = fs.readFileSync(filePath);
     const data = await pdfParse(dataBuffer);
     const text = data.text;
@@ -167,6 +166,7 @@ export default async function handler(req, res) {
 
     console.log("Resultados finales:", resultados);
 
+    // Eliminar el archivo temporal
     await unlinkAsync(filePath);
 
     res.status(200).json(resultados);
