@@ -123,7 +123,7 @@
       }
 
       /* Media Queries para dispositivos móviles */
-      @media (max-width: 600px) {
+      @media (max-width: 480px) {
         body {
           padding: 10px;
         }
@@ -155,7 +155,7 @@
   </head>
   <body>
     <div class="container">
-      <h1>Analizador equipo / listas</h1>
+      <h1>Análisis de PDF - Age of Sigmar</h1>
       <form id="uploadForm">
         <input type="file" id="pdfFile" name="file" accept="application/pdf" />
         <button type="submit">Subir y analizar PDF</button>
@@ -166,6 +166,12 @@
     </div>
 
     <script>
+      // Configuración de la URL base según el entorno
+      const API_URL =
+        window.location.hostname === "localhost"
+          ? "http://localhost:3000"
+          : "https://list-analizer.vercel.app"; // URL de producción en Vercel
+
       document
         .getElementById("uploadForm")
         .addEventListener("submit", async function (e) {
@@ -183,7 +189,7 @@
           formData.append("file", file);
 
           try {
-            const response = await fetch("/upload", {
+            const response = await fetch(`${API_URL}/upload`, {
               method: "POST",
               body: formData,
             });
@@ -208,7 +214,7 @@
             <h3>Unidades Rotas Encontradas:</h3>
             ${renderList(result.unidades_rotas_encontradas)}
           </div>
-          
+          <div class="result-section">
             <h3>Unidades Duras Encontradas:</h3>
             ${renderList(result.unidades_duras_encontradas)}
           </div>
@@ -216,7 +222,15 @@
             <h3>Puntuación Total:</h3>
             <div class="score">${result.puntuacion}</div>
           </div>
-         
+          <div class="result-section">
+            <h3>Evaluación del Equipo:</h3>
+            <div class="${
+              result.equipo_peligroso ===
+              "Equipo peligroso - muchas unidades rotas"
+                ? "highlight-danger"
+                : "highlight-safe"
+            }">${result.equipo_peligroso}</div>
+          </div>
         `;
       }
 
@@ -228,7 +242,8 @@
           <ul>
             ${items
               .map(
-                (item) => `<li>${item.unidad} - Cantidad: ${item.cantidad}</li>`
+                (item) =>
+                  `<li>${item.unidad} (Cantidad: ${item.cantidad}, Tier: ${item.tier})</li>`
               )
               .join("")}
           </ul>
