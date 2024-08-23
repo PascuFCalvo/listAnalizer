@@ -5,17 +5,15 @@ import pdfParse from "pdf-parse";
 import cors from "cors";
 import serverless from "serverless-http";
 
-// Configura dotenv para manejar variables de entorno
 dotenv.config();
 
 const app = express();
 app.use(cors());
 const port = process.env.PORT || 3000;
 
-// Configurar Multer para manejar la subida de archivos directamente en memoria
 const upload = multer({
-  storage: multer.memoryStorage(), // Almacena los archivos en memoria
-  limits: { fileSize: 50 * 1024 * 1024 }, // Limitar a 50MB
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 50 * 1024 * 1024 },
 });
 
 const unidades_rotas = [
@@ -44,24 +42,19 @@ const unidades_duras = [
 
 let puntuacion = 0;
 
-// Ruta para subir y procesar archivos PDF directamente desde el buffer en memoria
 app.post("/upload", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).send("No se ha subido ningún archivo");
     }
 
-    // Procesar el archivo PDF directamente desde el buffer en memoria
     const data = await pdfParse(req.file.buffer);
     const text = data.text;
-
-    // Fragmentar el texto en líneas y eliminar líneas vacías
     const lines = text.split(/\r?\n/).filter((line) => line.trim() !== "");
 
     let unidades_rotas_encontradas = [];
     let unidades_duras_encontradas = [];
 
-    // Función para agregar o actualizar unidades en el array
     const agregarOActualizarUnidad = (arr, nombreUnidad, tier) => {
       const unidadExistente = arr.find((u) => u.unidad === nombreUnidad);
       if (unidadExistente) {
@@ -75,9 +68,7 @@ app.post("/upload", upload.single("file"), async (req, res) => {
       }
     };
 
-    // Recorrer cada línea en busca de unidades
     lines.forEach((line, index) => {
-      // Verificar unidades rotas
       unidades_rotas.forEach((unidad) => {
         const regex = new RegExp(unidad, "gi");
         if (line.match(regex)) {
@@ -93,13 +84,13 @@ app.post("/upload", upload.single("file"), async (req, res) => {
               nextLine.includes("reforzada")
             ) {
               isReinforced = true;
-              puntuacion += 5; // Unidad rota reforzada
+              puntuacion += 5;
               break;
             }
           }
 
           if (!isReinforced) {
-            puntuacion += 3; // Unidad rota no reforzada
+            puntuacion += 3;
           }
 
           if (isReinforced) {
@@ -114,7 +105,6 @@ app.post("/upload", upload.single("file"), async (req, res) => {
         }
       });
 
-      // Verificar unidades duras
       unidades_duras.forEach((unidad) => {
         const regex = new RegExp(unidad, "gi");
         if (line.match(regex)) {
@@ -130,13 +120,13 @@ app.post("/upload", upload.single("file"), async (req, res) => {
               nextLine.includes("reforzada")
             ) {
               isReinforced = true;
-              puntuacion += 2; // Unidad dura reforzada
+              puntuacion += 2;
               break;
             }
           }
 
           if (!isReinforced) {
-            puntuacion += 1; // Unidad dura no reforzada
+            puntuacion += 1;
           }
 
           if (isReinforced) {
@@ -152,7 +142,6 @@ app.post("/upload", upload.single("file"), async (req, res) => {
       });
     });
 
-    // Crear un objeto que contenga todos los resultados
     const resultados = {
       unidades_rotas_encontradas,
       unidades_duras_encontradas,
@@ -163,13 +152,10 @@ app.post("/upload", upload.single("file"), async (req, res) => {
           : "Equipo seguro",
     };
 
-    // Loguear el objeto completo
     console.log(resultados);
 
-    // Resetear puntuación para futuras llamadas
     puntuacion = 0;
 
-    // Enviar el objeto como respuesta
     res.json(resultados);
   } catch (error) {
     console.error("Error al procesar el archivo:", error);
