@@ -6,6 +6,7 @@ import pdfParse from "pdf-parse";
 import path from "path";
 import { fileURLToPath } from "url";
 import cors from "cors";
+import serverless from "serverless-http";
 
 // Configura dotenv para manejar variables de entorno
 dotenv.config();
@@ -60,7 +61,6 @@ const upload = multer({
 app.use(express.static(path.join(__dirname, "public")));
 
 // Ruta para subir y procesar archivos PDF
-//añador no-cors
 app.post("/upload", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) {
@@ -194,11 +194,5 @@ app.post("/upload", upload.single("file"), async (req, res) => {
   }
 });
 
-// Iniciar el servidor solo en desarrollo
-if (process.env.NODE_ENV !== "production") {
-  app.listen(port, () => {
-    console.log(`Servidor corriendo en http://localhost:${port}`);
-  });
-}
-
-export default app;
+// Exportar la aplicación para ser usada por Netlify Functions
+export const handler = serverless(app);
