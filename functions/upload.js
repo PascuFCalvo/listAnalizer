@@ -3,10 +3,9 @@ import multer from "multer";
 import fs from "fs";
 import dotenv from "dotenv";
 import pdfParse from "pdf-parse";
-import path from "path";
-import { fileURLToPath } from "url";
 import cors from "cors";
 import serverless from "serverless-http";
+import { __dirname } from "./paths.js";
 
 // Configura dotenv para manejar variables de entorno
 dotenv.config();
@@ -14,10 +13,6 @@ dotenv.config();
 const app = express();
 app.use(cors());
 const port = process.env.PORT || 3000;
-
-// Obtener __dirname en un módulo ES
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // Crear la carpeta "uploads" si no existe
 const uploadDir = path.join(__dirname, "uploads");
