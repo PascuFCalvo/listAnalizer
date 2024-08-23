@@ -7,17 +7,18 @@ const unlinkAsync = promisify(fs.unlink);
 
 const upload = multer({
   dest: "/tmp",
-  limits: { fileSize: 50 * 1024 * 1024 },
+  limits: { fileSize: 50 * 1024 * 1024 }, // Limitar a 50MB
 });
 
 export const config = {
   api: {
-    bodyParser: false,
+    bodyParser: false, // Deshabilitar el parser de body por defecto
   },
 };
 
 export default async function handler(req, res) {
   try {
+    // Habilitar CORS para que cualquier dominio pueda acceder a la API
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
     res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -27,6 +28,7 @@ export default async function handler(req, res) {
       return;
     }
 
+    // Procesar la subida del archivo
     await new Promise((resolve, reject) => {
       upload.single("file")(req, {}, (err) => {
         if (err) reject(err);
@@ -49,36 +51,98 @@ export default async function handler(req, res) {
     const dataBuffer = fs.readFileSync(filePath);
     const pdfDoc = await PDFDocument.load(dataBuffer);
 
-    // Obtener algunas propiedades del PDF
-    const numPages = pdfDoc.getPageCount();
-    const title = pdfDoc.getTitle() || "Sin título";
-    const author = pdfDoc.getAuthor() || "Desconocido";
+    // Obtener todas las páginas del PDF
+    const pages = pdfDoc.getPages();
+    let extractedText = "";
 
-    console.log(`PDF cargado: ${title} por ${author}`);
-    console.log(`Número de páginas: ${numPages}`);
-
-    // Aquí puedes realizar cualquier manipulación adicional del PDF
-
-    // Ejemplo de manipulación: Añadir una nueva página
-    const page = pdfDoc.addPage([600, 400]);
-    page.drawText("Esta es una nueva página agregada al PDF", {
-      x: 50,
-      y: 350,
-      size: 25,
+    // Extraer texto de cada página
+    pages.forEach((page) => {
+      const { width, height } = page.getSize();
+      extractedText += `Página de tamaño: ${width}x${height}\n`; // Aquí no tenemos un método para extraer texto directamente
+      // Aquí es donde tendrías que usar una librería adicional para extraer texto
+      // Actualmente, pdf-lib no tiene una función nativa para extraer texto.
     });
 
-    // Guardar los cambios en el archivo PDF
-    const pdfBytes = await pdfDoc.save();
+    console.log("Texto extraído:", extractedText);
 
-    // Establecer encabezados para descargar el PDF
-    res.setHeader("Content-Disposition", 'attachment; filename="modified.pdf"');
-    res.setHeader("Content-Type", "application/pdf");
+    // Aquí puedes procesar el texto extraído y analizar las unidades
+    const unidades_rotas_encontradas = [];
+    const unidades_duras_encontradas = [];
+    let puntuacion = 0;
 
-    // Enviar el archivo PDF
-    res.status(200).send(Buffer.from(pdfBytes));
+    const unidades_rotas = [
+      "hexwraiths",
+      "morghasts",
+      "nagash",
+      "varanguard",
+      "rockgut",
+      "gluttons",
+      "glutons",
+      "dawnriders",
+      "pink horrors",
+      "flamers",
+      "kairos",
+      "palladors",
+      "raptors",
+    ];
+
+    const unidades_duras = [
+      "aggradon lancers",
+      "bladeheists",
+      "kroxigor",
+      "mortek",
+      "harrow",
+    ];
+
+    const agregarOActualizarUnidad = (arr, nombreUnidad, tier) => {
+      const unidadExistente = arr.find((u) => u.unidad === nombreUnidad);
+      if (unidadExistente) {
+        unidadExistente.cantidad += 1;
+      } else {
+        arr.push({ tier: tier, unidad: nombreUnidad, cantidad: 1 });
+      }
+    };
+
+    // Simulando líneas de texto extraído para analizar
+    const lines = extractedText
+      .split(/\r?\n/)
+      .filter((line) => line.trim() !== "");
+
+    lines.forEach((line) => {
+      unidades_rotas.forEach((unidad) => {
+        const regex = new RegExp(unidad, "gi");
+        if (line.match(regex)) {
+          puntuacion += 3;
+          agregarOActualizarUnidad(unidades_rotas_encontradas, unidad, "S");
+        }
+      });
+
+      unidades_duras.forEach((unidad) => {
+        const regex = new RegExp(unidad, "gi");
+        if (line.match(regex)) {
+          puntuacion += 1;
+          agregarOActualizarUnidad(unidades_duras_encontradas, unidad, "A");
+        }
+      });
+    });
+
+    const resultados = {
+      unidades_rotas_encontradas,
+      unidades_duras_encontradas,
+      puntuacion,
+      equipo_peligroso:
+        unidades_rotas_encontradas.length >= 4
+          ? "Equipo peligroso - muchas unidades rotas"
+          : "Equipo seguro",
+    };
+
+    console.log("Resultados finales:", resultados);
 
     // Eliminar el archivo temporal
     await unlinkAsync(filePath);
+
+    // Enviar los resultados como respuesta JSON
+    res.status(200).json(resultados);
   } catch (error) {
     console.error("Error al procesar el archivo:", error);
     res
